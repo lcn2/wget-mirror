@@ -1,52 +1,132 @@
 #!/bin/sh
 #
 # wget-mirror - command to mirror a site
+#
+# @(#) $Revision$
+# @(#) $Id$
+# @(#) $Source$
+#
+# Copyright (c) 2003 by Landon Curt Noll.  All Rights Reserved.
+#
+# Permission to use, copy, modify, and distribute this software and
+# its documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright, this permission notice and text
+# this comment, and the disclaimer below appear in all of the following:
+#
+#       supporting documentation
+#       source copies
+#       source works derived from this source
+#       binaries derived from this source or from derived source
+#
+# LANDON CURT NOLL DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+# EVENT SHALL LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+# USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+#
+# chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+#
+# Share and enjoy! :-)
+
+# usage message and doc
+#
+USAGE="$0 [-v] www.some.dom http://www.some.dom/URL local_dir [wget -flags ...]
+
+default wget flags used:
+
+	-m	   ==>	--mirror		(default)
+	-U x	   ==>	--user-agent=x	(default: wget-mirror-$VERSION)
+	-nH	   ==>	--no-host-directories	(default)
+	-np	   ==>	--no-parent		(default)
+	-D domlist ==>	--domains=domlist (only download from these domains)
+					(default: --domains=__FIRST_ARG__)
+	-t num	  ==>	--tries=num	(default: 20, -tries=inf --> forever)
+	-l num	  ==>	--level=num	(default: 32, --level=inf --> infinite)
+
+useful additional wget -flags:
+
+	-q	  ==>	--quiet
+	-L	  ==>	--relative
+	-R lst	  ==>	--reject lst	(comma separated file and extensions)
+	-Q quota  ==>   --quota=quota	(stop after download goes beyond quota)
+	--passive-ftp			(use passive FTP instead of active)
+
+NOTE:	Use --limit-rate=20k for 20k/sec rage limit
+	    --limit-rate=inf for max (unlimited) rate (default is unlimited)
+
+	Use --level=32 to limit recursion to a sane level (default is 5)
+	    --level=inf (or --level=0) for infinite recursion
+
+	Use --quiet to reduce output for something like a cron job
+
+	Use --reject hitcount,.cgi to block download of .cgi's and hitcount
+
+	Use --quota=5m to stop after 5 megabytes
+	The --quota never affect downloading a single file, only on recursion
+
+	On multi-domain sites, comma separate all of them for the 1st arg
+	For example, 1st arg could be: www.site.com,www.dmz.site.com
+
+	Use of multiple --rejects is OK, the result is the union of rejects
+	Use of multiple --domains=dom is OK, result is the union of domains
+
+	Use of multiple --level=num is OK, the result is the last value
+	Use of multiple --tries=num is OK, the result is the last value
+"
 
 # get version
 #
-VERSION='$Revision: 1.2 $'
+VERSION='$Revision: 1.3 $'
 VERSION=`/bin/echo "$VERSION" | /bin/sed -e 's/^.*: //' -e 's/ .*$//'`
 
 # parse args
 #
-if [ $# -lt 2 ]; then
-    echo "usage: $0 http://www.some.url local_dir [other wget -flags ...]" 1>&2
+VERBOSE=
+if [ $# -gt 0 -a X"$1" = X"-v" ]; then
+    VERBOSE=true
+    shift
+fi
+if [ $# -lt 3 ]; then
+    echo "$USAGE" 1>&2
     exit 1
 fi
-URL="$1"
-DIR="$2"
+DOMAINS="$1"
+URL="$2"
+DIR="$3"
+shift
 shift
 shift
 
 # firewall
 #
 if [ ! -d "$DIR" ]; then
+    if [ -z "$VERBOSE" ]; then
+	echo mkdir -p "$DIR"
+    fi
     mkdir -p "$DIR" 2>/dev/null
 fi
 if [ ! -d "$DIR" ]; then
     echo "$0: cannot create directory: $DIR" 1>&2
     exit 2
 fi
+if [ -z "$VERBOSE" ]; then
+    echo cd "$DIR"
+fi
 cd "$DIR"
 
-# NOTE: -q	==>	--quiet
-#	-m	==>	--mirror
-#	-nH	==>	--no-host-directories
-#	-p	==>	--page-requisites
-#	-U x	==>	--user-agent=x
-#	-l num	==>	--level=num	(-l 0 means infinite)
-#	-t num	==>	--tries=num
-#	-np	==>	--no-parent
-#	-L	==>	--relative
+# wget pages
 #
-# NOTE: use --limit-rate=20k for 20k/sec rage limit
-#	    --limit-rate=inf for max (unlimited) rate (default is unlimited)
-#	use --level=32 to limit recursion to a sane level (default is 5)
-#	    --level=inf (or --level=0) for infinite recursion
-#	use --quiet to reduce output for something like a cron job
-#
+if [ -z "$VERBOSE" ]; then
+    echo wget --mirror --user-agent=wget-mirror-$VERSION \
+	 --no-host-directories \
+	 --page-requisites --no-parent --domains="$DOMAINS" \
+	 --tries=20 --level=32 \
+	 "$@" "$URL"
+fi
 wget --mirror --user-agent=wget-mirror-$VERSION \
      --no-host-directories \
-     --page-requisites --no-parent --relative \
-     --level=20 --tries=20 \
-     $@ "$URL"
+     --no-parent --domains="$DOMAINS" \
+     --tries=20 --level=32 \
+     "$@" "$URL"
