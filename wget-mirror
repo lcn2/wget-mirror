@@ -2,8 +2,8 @@
 #
 # wget-mirror - command to mirror a site
 #
-# @(#) $Revision: 1.4 $
-# @(#) $Id: wget-mirror,v 1.4 2003/01/16 01:55:24 chongo Exp chongo $
+# @(#) $Revision: 1.5 $
+# @(#) $Id: wget-mirror,v 1.5 2003/01/16 02:02:53 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/wget-mirror/RCS/wget-mirror,v $
 #
 # Copyright (c) 2003 by Landon Curt Noll.  All Rights Reserved.
@@ -30,29 +30,45 @@
 #
 # Share and enjoy! :-)
 
+# get version
+#
+VERSION='$Revision: 1.5 $'
+VERSION=`/bin/echo "$VERSION" | /bin/sed -e 's/^.*: //' -e 's/ .*$//'`
+
 # usage message and doc
 #
-USAGE="$0 [-v] www.some.dom http://www.some.dom/URL local_dir [wget -flags ...]
+USAGE="$0 [-v] www.some.dom http://www.some.dom/URL local_dir [-flags ...]
 
 default wget flags used:
 
 	-m	   ==>	--mirror		(default)
-	-U x	   ==>	--user-agent=x	(default: wget-mirror-$VERSION)
+	-U x	   ==>	--user-agent=x		(default: wget-mirror-$VERSION)
 	-nH	   ==>	--no-host-directories	(default)
 	-np	   ==>	--no-parent		(default)
-	-D domlist ==>	--domains=domlist (only download from these domains)
+	-D domlist ==>	--domains=domlist 	(limit download to domains)
 					(default: --domains=__FIRST_ARG__)
 	-t num	  ==>	--tries=num	(default: 20, -tries=inf --> forever)
 	-l num	  ==>	--level=num	(default: 32, --level=inf --> infinite)
+	--cache=off			(default)
+	--passive-ftp			(default passive FTP instead of active)
 
 useful additional wget -flags:
 
-	-q	  ==>	--quiet
-	-L	  ==>	--relative
-	-R lst	  ==>	--reject lst	(comma separated file and extensions)
+	-q	  ==>	--quiet			(disable output)
+	-o log	  ==>	--output-file=log	(output results to log)
+	-a log	  ==>	--append-output=log	(append results to log)
+
+	-L	  ==>	--relative	(follow only relative links)
+	-R list	  ==>	--reject lest	(comma separated file and extensions)
+
 	-Q quota  ==>   --quota=quota	(stop after download goes beyond quota)
-	--passive-ftp			(use passive FTP instead of active)
 	--limit-rate=20k		(to be nice to a site)
+	--cache=on			(restore use of server side cache)
+
+	-p	  ==>	--page-requisites	(download all a page's files)
+	-k	  ==>	--convert-links		(convert links for local view)
+	-K	  ==>	--backup-converted	(keep orig version as .orig)
+	--html-extension			(force .html suf on text/html)
 
 NOTE:	Use --limit-rate=20k for 20k/sec rage limit
 	    --limit-rate=inf for max (unlimited) rate (default is unlimited)
@@ -65,7 +81,11 @@ NOTE:	Use --limit-rate=20k for 20k/sec rage limit
 	Use --reject hitcount,.cgi to block download of .cgi's and hitcount
 
 	Use --quota=5m to stop after 5 megabytes
-	The --quota never affect downloading a single file, only on recursion
+	The --quota never single downloads, only recursive or multi ones
+
+	Use --page-requisites so page has all files needed to display it
+
+	Use --convert-links --backup-converted --html-extension for local view
 
 	On multi-domain sites, comma separate all of them for the 1st arg
 	For example, 1st arg could be: www.site.com,www.dmz.site.com
@@ -75,12 +95,7 @@ NOTE:	Use --limit-rate=20k for 20k/sec rage limit
 
 	Use of multiple --level=num is OK, the result is the last value
 	Use of multiple --tries=num is OK, the result is the last value
-"
-
-# get version
-#
-VERSION='$Revision: 1.4 $'
-VERSION=`/bin/echo "$VERSION" | /bin/sed -e 's/^.*: //' -e 's/ .*$//'`
+	Use of multiple --cache={off,on} is OK, the result is the last value"
 
 # parse args
 #
@@ -121,13 +136,13 @@ cd "$DIR"
 #
 if [ -z "$VERBOSE" ]; then
     echo wget --mirror --user-agent=wget-mirror-$VERSION \
-	 --no-host-directories \
+	 --no-host-directories --passive-ftp \
 	 --page-requisites --no-parent --domains="$DOMAINS" \
-	 --tries=20 --level=32 \
+	 --tries=20 --level=32 --cache=off \
 	 "$@" "$URL"
 fi
 wget --mirror --user-agent=wget-mirror-$VERSION \
-     --no-host-directories \
+     --no-host-directories --passive-ftp \
      --no-parent --domains="$DOMAINS" \
-     --tries=20 --level=32 \
+     --tries=20 --level=32 --cache=off \
      "$@" "$URL"
