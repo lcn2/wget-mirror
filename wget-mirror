@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# wget-mirror - command to mirror a site
+
+# parse args
+#
+if [ $# -lt 2 ]; then
+    echo "usage: $0 http://www.some.url local_dir [other wget -flags ...]" 1>&2
+    exit 1
+fi
+URL="$1"
+DIR="$2"
+shift
+shift
+
+# firewall
+#
+if [ ! -d "$DIR" ]; then
+    mkdir -p "$DIR" 2>/dev/null
+fi
+if [ ! -d "$DIR" ]; then
+    echo "$0: cannot create directory: $DIR" 1>&2
+    exit 2
+fi
+cd "$DIR"
+
+# NOTE: For deep trees increase the --level value or set to infinite with -l 0
+# NOTE: Add --quiet to see how to reduce output for something like a cron job
+#
+# NOTE: -q	==>	--quiet
+#	-m	==>	--mirror
+#	-nH	==>	--no-host-directories
+#	-p	==>	--page-requisites
+#	-U x	==>	--user-agent=x
+#	-l num	==>	--level=num	(-l 0 means infinite)
+#	-t num	==>	--tries=num
+#	-np	==>	--no-parent
+#
+wget --mirror --no-host-directories --page-requisites \
+    --user-agent=wget-mirror --level=20 --tries=20 --no-parent \
+    --limit-rate=20k $@ "$URL"
