@@ -2,9 +2,9 @@
 #
 # wget-mirror - command to mirror a site
 #
-# @(#) $Revision$
-# @(#) $Id$
-# @(#) $Source$
+# @(#) $Revision: 1.4 $
+# @(#) $Id: wget-mirror,v 1.4 2003/01/16 01:55:24 chongo Exp chongo $
+# @(#) $Source: /usr/local/src/cmd/wget-mirror/RCS/wget-mirror,v $
 #
 # Copyright (c) 2003 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -52,6 +52,7 @@ useful additional wget -flags:
 	-R lst	  ==>	--reject lst	(comma separated file and extensions)
 	-Q quota  ==>   --quota=quota	(stop after download goes beyond quota)
 	--passive-ftp			(use passive FTP instead of active)
+	--limit-rate=20k		(to be nice to a site)
 
 NOTE:	Use --limit-rate=20k for 20k/sec rage limit
 	    --limit-rate=inf for max (unlimited) rate (default is unlimited)
@@ -78,7 +79,7 @@ NOTE:	Use --limit-rate=20k for 20k/sec rage limit
 
 # get version
 #
-VERSION='$Revision: 1.3 $'
+VERSION='$Revision: 1.4 $'
 VERSION=`/bin/echo "$VERSION" | /bin/sed -e 's/^.*: //' -e 's/ .*$//'`
 
 # parse args
