@@ -2,9 +2,13 @@
 #
 # wget-mirror - command to mirror a site
 
+# get version
+#
+VERSION='$Revision: 1.2 $'
+VERSION=`/bin/echo "$VERSION" | /bin/sed -e 's/^.*: //' -e 's/ .*$//'`
+
 # parse args
 #
-VERSION='$Revision$'
 if [ $# -lt 2 ]; then
     echo "usage: $0 http://www.some.url local_dir [other wget -flags ...]" 1>&2
     exit 1
