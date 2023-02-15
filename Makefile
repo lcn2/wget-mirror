@@ -3,9 +3,9 @@
 #
 # wget-mirror - command to mirror a site
 #
-# @(#) $Revision$
-# @(#) $Id$
-# @(#) $Source$
+# @(#) $Revision: 1.1 $
+# @(#) $Id: Makefile,v 1.1 2003/01/15 23:50:56 chongo Exp $
+# @(#) $Source: /usr/local/src/bin/wget-mirror/RCS/Makefile,v $
 #
 # Copyright (c) 2003 by Landon Curt Noll.  All Rights Reserved.
 #

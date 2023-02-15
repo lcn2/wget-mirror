@@ -2,9 +2,9 @@
 #
 # wget-mirror - command to mirror a site
 #
-# @(#) $Revision: 1.6 $
-# @(#) $Id: wget-mirror,v 1.6 2003/01/16 07:18:51 chongo Exp chongo $
-# @(#) $Source: /usr/local/src/cmd/wget-mirror/RCS/wget-mirror,v $
+# @(#) $Revision: 1.7 $
+# @(#) $Id: wget-mirror,v 1.7 2003/01/19 21:36:49 chongo Exp $
+# @(#) $Source: /usr/local/src/bin/wget-mirror/RCS/wget-mirror,v $
 #
 # Copyright (c) 2003 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -32,7 +32,7 @@
 
 # get version
 #
-VERSION='$Revision: 1.6 $'
+VERSION='$Revision: 1.7 $'
 VERSION=`/bin/echo "$VERSION" | /bin/sed -e 's/^.*: //' -e 's/ .*$//'`
 
 # usage message and doc
