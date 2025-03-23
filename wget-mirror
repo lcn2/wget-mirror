@@ -1,12 +1,8 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
-# wget-mirror - command to mirror a site
+# wget-mirror - mirror a web site into a local directory
 #
-# @(#) $Revision: 1.7 $
-# @(#) $Id: wget-mirror,v 1.7 2003/01/19 21:36:49 chongo Exp $
-# @(#) $Source: /usr/local/src/bin/wget-mirror/RCS/wget-mirror,v $
-#
-# Copyright (c) 2003 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 2003,2023,2025 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -26,33 +22,66 @@
 # OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 #
-# chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+# chongo (Landon Curt Noll) /\oo/\
 #
-# Share and enjoy! :-)
-
-# get version
+# http://www.isthe.com/chongo/index.html
+# https://github.com/lcn2
 #
-VERSION='$Revision: 1.7 $'
-VERSION=`/bin/echo "$VERSION" | /bin/sed -e 's/^.*: //' -e 's/ .*$//'`
+# Share and enjoy!  :-)
 
-# usage message and doc
+
+# setup
 #
-USAGE="$0 [-v] www.some.dom http://www.some.dom/URL local_dir [-flags ...]
+export VERSION="1.7.1 2025-03-23"
+export VER="${VERSION% *}"
+NAME=$(basename "$0")
+export NAME
+WGET_TOOL=$(type -P wget)
+export WGET_TOOL
+#
+export V_FLAG=0
+#
+export NOOP=
+export DO_NOT_PROCESS=
 
-default wget flags used:
+
+# usage
+#
+USAGE="$NAME [-h] [-v] [-V] [-n] [-N] [-w wget] --
+    www.some.dom http://www.some.dom/URL local_dir [-flags ...]
+
+    -h          print help message and exit
+    -v level    set verbosity level (def level: $V_FLAG)
+    -V          print version string and exit
+
+    -n          go thru the actions, but do not update any files (def: do the action)
+    -N          do not process anything, just parse arguments (def: process something)
+
+    -w wget	path to the wget tool (def: $WGET_TOOL)
+
+Exit codes:
+     0         all OK
+     1         some internal tool exited non-zero
+     2         -h and help string printed or -V and version string printed
+     3         command line error
+     4	       unable to make or use local_dir
+     5	       unable to find wget tool
+ >= 10         internal error
+
+Default wget flags used (override any of these by giving more flags end of the command line):
 
 	-m	   ==>	--mirror		(same is: -r -N -l inf -nr)
-	-U x	   ==>	--user-agent=x		(uses: wget-mirror-$VERSION)
+	-U x	   ==>	--user-agent=x		(uses: wget-mirror-$VER)
 	-nH	   ==>	--no-host-directories	(no www.host.org subdir)
 	-np	   ==>	--no-parent		(don't upload above path)
-	-D domlist ==>	--domains=domlist 	(limit download to domains)
+	-D domlist ==>	--domains=domlist	(limit download to domains)
 					(uses: --domains=__FIRST_ARG__)
 	-t num	  ==>	--tries=num	(uses: 20, --tries=inf --> forever)
 	-l num	  ==>	--level=num	(uses: 32, --level=inf --> infinite)
 	--cache=off			(try to disable network caching)
 	--passive-ftp			(passive FTP instead of active)
 
-useful additional wget -flags:
+Useful additional wget -flags you may supply at the end of the command line:
 
 	-q	  ==>	--quiet			(disable output)
 	-o log	  ==>	--output-file=log	(output results to log)
@@ -80,7 +109,7 @@ NOTE:	Use --limit-rate=20k for 20k/sec rage limit
 	Use --quiet to reduce output for something like a cron job
 	Use --reject hitcount,.cgi to block download of .cgi's and hitcount
 	Use --timestamping to not reload pages already on disk.  See: --mirror
-	Use --dont-remove-listing so ftp mirroring works. 	 See: --mirror
+	Use --dont-remove-listing so ftp mirroring works.	 See: --mirror
 	Use --recursive to mirror links down to --level=num.	 See: --mirror
 	Use --quota=5m to stop after 5 megabytes
 	    --quota does not affect 1 file download, only recursive/multi ones
@@ -92,54 +121,161 @@ NOTE:	Use --limit-rate=20k for 20k/sec rage limit
 	Use of multiple --domains=dom is OK, result is the union of domains
 	Use of multiple --level=num is OK, the result is the last value
 	Use of multiple --tries=num is OK, the result is the last value
-	Use of multiple --cache={off,on} is OK, the result is the last value"
+	Use of multiple --cache={off,on} is OK, the result is the last value
 
-# parse args
+$NAME version: $VERSION"
+
+
+# parse command line
 #
-VERBOSE=
-if [ $# -gt 0 -a X"$1" = X"-v" ]; then
-    VERBOSE=true
-    shift
+while getopts :hv:VnNw: flag; do
+  case "$flag" in
+    h) echo "$USAGE"
+	exit 2
+	;;
+    v) V_FLAG="$OPTARG"
+	;;
+    V) echo "$VERSION"
+	exit 2
+	;;
+    n) NOOP="-n"
+	;;
+    N) DO_NOT_PROCESS="-N"
+	;;
+    w) WGET_TOOL="$OPTARG"
+	;;
+    \?) echo "$0: ERROR: invalid option: -$OPTARG" 1>&2
+	echo 1>&2
+	echo "$USAGE" 1>&2
+	exit 3
+	;;
+    :) echo "$0: ERROR: option -$OPTARG requires an argument" 1>&2
+	echo 1>&2
+	echo "$USAGE" 1>&2
+	exit 3
+	;;
+    *) echo "$0: ERROR: unexpected value from getopts: $flag" 1>&2
+	echo 1>&2
+	echo "$USAGE" 1>&2
+	exit 3
+	;;
+  esac
+done
+if [[ $V_FLAG -ge 1 ]]; then
+    echo "$0: debug[1]: debug level: $V_FLAG" 1>&2
 fi
-if [ $# -lt 3 ]; then
+#
+# remove the options
+#
+shift $(( OPTIND - 1 ));
+#
+# verify arg count
+#
+if [[ $# -lt 3 ]]; then
+    echo "$0: ERROR: expected at least 3 args, found: $#" 1>&2
     echo "$USAGE" 1>&2
-    exit 1
+    exit 3
 fi
-DOMAINS="$1"
-URL="$2"
-DIR="$3"
+export DOMAIN="$1"
+export URL="$2"
+export DIR="$3"
 shift
 shift
 shift
 
-# firewall
+
+# firewall - must have wget tool
 #
-if [ ! -d "$DIR" ]; then
-    if [ -z "$VERBOSE" ]; then
-	echo mkdir -p "$DIR"
+if [[ ! -x $WGET_TOOL ]]; then
+    echo "$0: ERROR: cannot find wget tool: $WGET_TOOL" 1>&2
+    exit 5
+fi
+
+
+# cd to local_dir, creating if needed
+#
+if [[ ! -d "$DIR" ]]; then
+    if [[ $V_FLAG -ge 1 ]]; then
+	echo "$0: debug[1]: mkdir -p $DIR" 1>&2
     fi
-    mkdir -p "$DIR" 2>/dev/null
+    if [[ -z $NOOP ]]; then
+	mkdir -p "$DIR" 2>/dev/null
+    fi
 fi
-if [ ! -d "$DIR" ]; then
-    echo "$0: cannot create directory: $DIR" 1>&2
-    exit 2
+if [[ ! -d "$DIR" ]]; then
+    echo "$0: cannot create local_dir directory: $DIR" 1>&2
+    exit 4
 fi
-if [ -z "$VERBOSE" ]; then
-    echo cd "$DIR"
+if [[ ! -w "$DIR" ]]; then
+    echo "$0: local_dir directory is not writable: $DIR" 1>&2
+    exit 4
 fi
-cd "$DIR"
+export CD_FAILED
+if [[ $V_FLAG -ge 3 ]]; then
+    echo "$0: debug[5]: about to: cd $DIR" 1>&2
+fi
+cd "$DIR" || CD_FAILED="true"
+if [[ -n $CD_FAILED ]]; then
+    echo "$0: ERROR: cd $DIR failed" 1>&2
+    exit 4
+fi
+if [[ $V_FLAG -ge 3 ]]; then
+    echo "$0: debug[3]: now in directory: $(/bin/pwd)" 1>&2
+fi
 
-# wget pages
+
+# print running info if verbose
 #
-if [ -z "$VERBOSE" ]; then
-    echo wget --mirror --user-agent=wget-mirror-$VERSION \
+# If -v 3 or higher, print exported variables in order that they were exported.
+#
+if [[ $V_FLAG -ge 3 ]]; then
+    echo "$0: debug[3]: VERSION=$VERSION" 1>&2
+    echo "$0: debug[3]: VER=$VER" 1>&2
+    echo "$0: debug[3]: NAME=$NAME" 1>&2
+    echo "$0: debug[3]: V_FLAG=$V_FLAG" 1>&2
+    echo "$0: debug[3]: NOOP=$NOOP" 1>&2
+    echo "$0: debug[3]: DO_NOT_PROCESS=$DO_NOT_PROCESS" 1>&2
+    echo "$0: debug[3]: additional flags starts below" 1>&2
+    for i in "$@"; do
+	echo "    $i" 1>&2
+    done
+    echo "$0: debug[3]: additional flags ends above" 1>&2
+fi
+
+
+# -N stops early before any processing is performed
+#
+if [[ -n $DO_NOT_PROCESS ]]; then
+    if [[ $V_FLAG -ge 3 ]]; then
+	echo "$0: debug[3]: arguments parsed, -N given, exiting 0" 1>&2
+    fi
+    exit 0
+fi
+
+
+# use wget to fetch the web site
+#
+if [[ $V_FLAG -ge 1 ]]; then
+    echo "$WGET_TOOL" --mirror "--user-agent=wget-mirror-$VER" \
 	 --no-host-directories --passive-ftp \
-	 --page-requisites --no-parent --domains="$DOMAINS" \
+	 --page-requisites --no-parent "--domains=$DOMAIN" \
+	 --tries=20 --level=32 --cache=off \
+	 "$@" "$URL" 1>&2
+fi
+if [[ -z $NOOP ]]; then
+    "$WGET_TOOL" --mirror "--user-agent=wget-mirror-$VER" \
+	 --no-host-directories --passive-ftp \
+	 --no-parent "--domains=$DOMAIN" \
 	 --tries=20 --level=32 --cache=off \
 	 "$@" "$URL"
+    status="$?"
+    if [[ $status -ne 0 ]]; then
+	echo "$0: ERROR: $WGET_TOOL ... failed, error: $status" 1>&2
+	exit 1
+    fi
 fi
-wget --mirror --user-agent=wget-mirror-$VERSION \
-     --no-host-directories --passive-ftp \
-     --no-parent --domains="$DOMAINS" \
-     --tries=20 --level=32 --cache=off \
-     "$@" "$URL"
+
+
+# All Done!!! All Done!!! -- Jessica Noll, Age 2
+#
+exit 0
