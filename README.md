@@ -13,15 +13,15 @@ sudo make install
 # Example
 
 ```sh
-wget-mirror www.example.org http://www.example.org/index.html local_dir
+$ wget-mirror www.example.org http://www.example.org/index.html local_dir
 ```
 
 
 # To use
 
-```sh
-wget-mirror [-h] [-v] [-V] [-n] [-N] [-w wget] --
-    www.some.dom http://www.some.dom/URL local_dir [-flags ...]
+```
+/usr/local/bin/wget-mirror [-h] [-v] [-V] [-n] [-N] [-w wget] --
+                           www.some.dom http://www.some.dom/URL local_dir [-flags ...]
 
     -h          print help message and exit
     -v level    set verbosity level (def level: 0)
